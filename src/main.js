@@ -1,7 +1,7 @@
 import './style.css'
 import javascriptLogo from './javascript.svg'
 import { setupCounter } from './counter.js'
-import { Loginform } from "./loginform/loginform.js";
+import {LoginForm,} from "./loginform/loginform.js";
 
 document.querySelector('#app').innerHTML = `
   <div>
@@ -18,7 +18,7 @@ document.querySelector('#app').innerHTML = `
   </div>
 `
 if (true) {
-    new Loginform('app')
+    new LoginForm('app')
 } else {
     setupCounter(document.getElementById('counter'));
 }

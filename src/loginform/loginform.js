@@ -1,5 +1,6 @@
 import './style.css'
-export class Loginform {
+import { authService } from '../auth/auth.js'
+export class LoginForm {
 
     constructor(containerId) {
         this.container = document.getElementById(containerId);
@@ -13,8 +14,8 @@ export class Loginform {
         <h1>Авторизация</h1>
         <form id="loginForm">
           <div class="form-group">
-            <label for="email">Email:</label>
-            <input type="email" id="email" name="email" required>
+            <label for="login">Имя пользователя:</label>
+            <input type="text" id="login" name="login" required autocomplete="true">
           </div>
           <div class="form-group">
             <label for="password">Пароль:</label>
@@ -29,22 +30,26 @@ export class Loginform {
     setupEventListeners() {
         this.container.querySelector('#loginForm').addEventListener('submit', (event) => {
             event.preventDefault();
-            const email = this.container.querySelector('#email').value;
+            const login = this.container.querySelector('#login').value;
             const password = this.container.querySelector('#password').value;
 
-            if (!email || !password) {
+            if (!login || !password) {
                 alert('Пожалуйста, заполните все поля!');
                 return;
             }
 
-            this.handleSubmit(email, password);
+            this.handleSubmit(login, password);
         });
     }
 
-    handleSubmit(email, password) {
-        // Здесь можно добавить логику отправки данных на сервер
-        console.log('Email:', email);
-        console.log('Password:', password);
-        alert(`Авторизация для ${email} прошла успешно!`);
+    async handleSubmit(login, password) {
+        const result = await authService.login(login, password);
+
+        if (result.success) {
+            alert(`Авторизация пользователя ${result.data.username} прошла успешно!`);
+            console.log('Token:', result.data.token);
+        } else {
+            alert('Ошибка авторизации: ' + result.error);
+        }
     }
 }
