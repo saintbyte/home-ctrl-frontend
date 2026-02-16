@@ -1,25 +1,15 @@
 import './style.css'
-import javascriptLogo from './javascript.svg'
-import { setupCounter } from './counter.js'
-import {LoginForm,} from "./loginform/loginform.js";
+import { LoginForm } from "./loginform/loginform.js";
+import { MainView } from "./mainview/mainview.js";
+import { authService } from "./auth/auth.js";
 
-document.querySelector('#app').innerHTML = `
-  <div>
-    <a href="https://developer.mozilla.org/en-US/docs/Web/JavaScript" target="_blank">
-      <img src="${javascriptLogo}" class="logo vanilla" alt="JavaScript logo" />
-    </a>
-    <h1>Hello Vite!</h1>
-    <div class="card">
-      <button id="counter" type="button"></button>
-    </div>
-    <p class="read-the-docs">
-      Click on the Vite logo to learn more
-    </p>
-  </div>
-`
-if (true) {
-    new LoginForm('app')
-} else {
-    setupCounter(document.getElementById('counter'));
+function logout() {
+    authService.logout();
+    location.reload();
 }
 
+if (authService.isLoggedIn()) {
+    new MainView('app', logout);
+} else {
+    new LoginForm('app');
+}

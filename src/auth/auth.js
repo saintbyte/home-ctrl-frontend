@@ -2,6 +2,17 @@ class AuthService {
     constructor() {
         this.tokenKey = 'authToken';
         this.usernameKey = 'username';
+        this.csrfToken = null;
+    }
+
+    async initCsrf() {
+        try {
+            const response = await fetch('/api/v1/auth/csrf', { credentials: 'same-origin' });
+            const data = await response.json();
+            this.csrfToken = data.csrfToken;
+        } catch (error) {
+            console.warn('CSRF token fetch failed:', error);
+        }
     }
 
     setToken(token) {
@@ -37,12 +48,21 @@ class AuthService {
     }
 
     async login(username, password) {
+        await this.initCsrf();
+        
         try {
+            const headers = {
+                'Content-Type': 'application/json'
+            };
+            
+            if (this.csrfToken) {
+                headers['X-CSRF-Token'] = this.csrfToken;
+            }
+            
             const response = await fetch('/api/v1/auth/login', {
                 method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json'
-                },
+                headers: headers,
+                credentials: 'same-origin',
                 body: JSON.stringify({
                     username: username,
                     password: password
