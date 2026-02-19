@@ -8,8 +8,12 @@ function logout() {
     location.reload();
 }
 
-if (authService.isLoggedIn()) {
+function showMainView() {
     new MainView('app', logout);
+}
+
+if (authService.isLoggedIn()) {
+    showMainView();
 } else {
-    new LoginForm('app');
+    new LoginForm('app', showMainView);
 }

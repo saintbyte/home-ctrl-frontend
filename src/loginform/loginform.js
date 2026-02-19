@@ -2,8 +2,9 @@ import './style.css'
 import { authService } from '../auth/auth.js'
 export class LoginForm {
 
-    constructor(containerId) {
+    constructor(containerId, onLoginSuccess) {
         this.container = document.getElementById(containerId);
+        this.onLoginSuccess = onLoginSuccess;
         this.render();
         this.setupEventListeners();
     }
@@ -46,8 +47,8 @@ export class LoginForm {
         const result = await authService.login(login, password);
 
         if (result.success) {
-            alert(`Авторизация пользователя ${result.data.username} прошла успешно!`);
             console.log('Token:', result.data.token);
+            this.onLoginSuccess();
         } else {
             alert('Ошибка авторизации: ' + result.error);
         }
