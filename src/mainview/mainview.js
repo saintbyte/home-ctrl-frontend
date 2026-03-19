@@ -15,7 +15,7 @@ export class MainView {
     async loadData() {
         try {
             const headers = authService.getAuthHeaders();
-            const response = await fetch('/api/v1/main', {
+            const response = await fetch('/api/v1/mainview', {
                 headers,
                 credentials: 'same-origin'
             });
