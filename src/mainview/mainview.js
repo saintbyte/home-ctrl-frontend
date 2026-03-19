@@ -5,9 +5,9 @@ export class MainView {
     constructor(containerId, onLogout) {
         this.container = document.getElementById(containerId);
         this.onLogout = onLogout;
-        this.isEditMode = false;
-        this.devices = [];
-        this.sensors = [];
+        this.currentView = 'list';
+        this.currentWidget = null;
+        this.widgets = [];
         this.render();
         this.loadData();
     }
@@ -26,9 +26,8 @@ export class MainView {
             }
             
             const data = await response.json();
-            this.devices = data.devices || [];
-            this.sensors = data.sensors || [];
-            this.renderData();
+            this.widgets = data.widgets || [];
+            this.renderWidgetsList();
         } catch (error) {
             console.error('Failed to load data:', error);
             this.container.querySelector('.main-content').innerHTML = 
@@ -42,53 +41,97 @@ export class MainView {
                 <header class="main-header">
                     <h1>Панель управления</h1>
                     <div class="header-actions">
-                        <button id="editModeBtn" class="btn-secondary">Редактировать</button>
+                        <button id="backBtn" class="btn-secondary" style="display: none;">← Назад</button>
                         <button id="logoutBtn" class="btn-danger">Выйти</button>
                     </div>
                 </header>
-                <div class="main-content">
-                    <section class="sensors-section">
-                        <h2>Датчики</h2>
-                        <div class="sensors-list"></div>
-                    </section>
-                    <section class="devices-section">
-                        <h2>Устройства</h2>
-                        <div class="devices-list"></div>
-                    </section>
-                </div>
+                <div class="main-content"></div>
             </div>
         `;
         
         this.setupEventListeners();
     }
 
-    renderData() {
-        const sensorsList = this.container.querySelector('.sensors-list');
-        const devicesList = this.container.querySelector('.devices-list');
+    renderWidgetsList() {
+        const content = this.container.querySelector('.main-content');
+        const backBtn = this.container.querySelector('#backBtn');
         
-        sensorsList.innerHTML = this.sensors.map(sensor => `
-            <div class="sensor-item ${this.isEditMode ? 'edit-mode' : ''}" data-id="${sensor.id}">
-                <span class="sensor-name">${sensor.name}</span>
-                <span class="sensor-value">${sensor.value} ${sensor.unit || ''}</span>
-                ${this.isEditMode ? `<button class="btn-edit" data-type="sensor" data-id="${sensor.id}">Изменить</button>` : ''}
-            </div>
-        `).join('') || '<p>Нет данных с датчиков</p>';
+        backBtn.style.display = 'none';
+        this.currentView = 'list';
+        
+        if (this.widgets.length === 0) {
+            content.innerHTML = '<p class="empty-state">Нет доступных виджетов</p>';
+            return;
+        }
 
-        devicesList.innerHTML = this.devices.map(device => `
-            <div class="device-item ${this.isEditMode ? 'edit-mode' : ''}" data-id="${device.id}">
-                <span class="device-name">${device.name}</span>
-                <span class="device-state ${device.state ? 'on' : 'off'}">
-                    ${device.state ? 'Включено' : 'Выключено'}
-                </span>
-                ${!this.isEditMode ? `
-                    <button class="btn-toggle" data-id="${device.id}">
-                        ${device.state ? 'Выключить' : 'Включить'}
-                    </button>
-                ` : `
-                    <button class="btn-edit" data-type="device" data-id="${device.id}">Изменить</button>
-                `}
-            </div>
-        `).join('') || '<p>Нет устройств</p>';
+        content.innerHTML = `
+            <section class="widgets-section">
+                <h2>Виджеты</h2>
+                <div class="widgets-grid">
+                    ${this.widgets.map(widget => `
+                        <div class="widget-card" data-widget="${widget.Name}">
+                            <h3 class="widget-title">${this.getWidgetDisplayName(widget.Name)}</h3>
+                            <div class="widget-preview" data-widget="${widget.Name}"></div>
+                        </div>
+                    `).join('')}
+                </div>
+            </section>
+        `;
+
+        this.setupWidgetPreview();
+    }
+
+    getWidgetDisplayName(name) {
+        const names = {
+            'clock': 'Часы',
+            'network_ips': 'Сетевые IP',
+            'weather': 'Погода',
+            'calendar': 'Календарь'
+        };
+        return names[name] || name;
+    }
+
+    async setupWidgetPreview() {
+        const previews = this.container.querySelectorAll('.widget-preview');
+        
+        for (const preview of previews) {
+            const widgetName = preview.dataset.widget;
+            const widgetData = this.widgets.find(w => w.Name === widgetName);
+            const widgetComponent = await this.loadWidget(widgetName, 'preview', widgetData);
+            if (widgetComponent) {
+                preview.innerHTML = widgetComponent;
+            }
+        }
+    }
+
+    async loadWidget(widgetName, mode, data) {
+        const widgetMap = {
+            'clock': () => import('../widgets/clock/clock.js').then(m => m.render(data, mode)),
+            'network_ips': () => import('../widgets/network-ips/network-ips.js').then(m => m.render(data, mode))
+        };
+
+        const loader = widgetMap[widgetName];
+        if (loader) {
+            return await loader();
+        }
+        return `<p class="widget-unavailable">Виджет "${widgetName}" не найден</p>`;
+    }
+
+    async openWidgetDetail(widgetName) {
+        const content = this.container.querySelector('.main-content');
+        const backBtn = this.container.querySelector('#backBtn');
+        const header = this.container.querySelector('.main-header h1');
+        
+        backBtn.style.display = 'block';
+        header.textContent = this.getWidgetDisplayName(widgetName);
+        this.currentView = 'detail';
+        this.currentWidget = widgetName;
+
+        content.innerHTML = '<div class="widget-detail-loading">Загрузка...</div>';
+
+        const widgetData = this.widgets.find(w => w.Name === widgetName);
+        const widgetHtml = await this.loadWidget(widgetName, 'detail', widgetData);
+        content.innerHTML = widgetHtml;
     }
 
     setupEventListeners() {
@@ -96,131 +139,16 @@ export class MainView {
             this.onLogout();
         });
 
-        this.container.querySelector('#editModeBtn').addEventListener('click', () => {
-            this.isEditMode = !this.isEditMode;
-            this.renderData();
-            this.setupEventListeners();
+        this.container.querySelector('#backBtn').addEventListener('click', () => {
+            this.renderWidgetsList();
+            this.container.querySelector('.main-header h1').textContent = 'Панель управления';
         });
 
-        this.container.querySelectorAll('.btn-toggle').forEach(btn => {
-            btn.addEventListener('click', (e) => {
-                const deviceId = e.target.dataset.id;
-                this.toggleDevice(deviceId);
+        this.container.querySelectorAll('.widget-card').forEach(card => {
+            card.addEventListener('click', (e) => {
+                const widgetName = e.currentTarget.dataset.widget;
+                this.openWidgetDetail(widgetName);
             });
         });
-
-        this.container.querySelectorAll('.btn-edit').forEach(btn => {
-            btn.addEventListener('click', (e) => {
-                const type = e.target.dataset.type;
-                const id = e.target.dataset.id;
-                this.openEditModal(type, id);
-            });
-        });
-    }
-
-    async toggleDevice(deviceId) {
-        const device = this.devices.find(d => d.id === deviceId);
-        if (!device) return;
-
-        try {
-            const headers = {
-                ...authService.getAuthHeaders(),
-                'Content-Type': 'application/json'
-            };
-            
-            await fetch(`/api/v1/devices/${deviceId}/toggle`, {
-                method: 'POST',
-                headers,
-                credentials: 'same-origin'
-            });
-            
-            device.state = !device.state;
-            this.renderData();
-            this.setupEventListeners();
-        } catch (error) {
-            console.error('Failed to toggle device:', error);
-        }
-    }
-
-    openEditModal(type, id) {
-        const item = type === 'sensor' 
-            ? this.sensors.find(s => s.id === id)
-            : this.devices.find(d => d.id === id);
-        
-        if (!item) return;
-
-        const modal = document.createElement('div');
-        modal.className = 'modal-overlay';
-        modal.innerHTML = `
-            <div class="modal">
-                <h3>Редактирование ${type === 'sensor' ? 'датчика' : 'устройства'}</h3>
-                <form id="editForm">
-                    <div class="form-group">
-                        <label>Название:</label>
-                        <input type="text" name="name" value="${item.name}" required>
-                    </div>
-                    ${type === 'sensor' ? `
-                        <div class="form-group">
-                            <label>Значение:</label>
-                            <input type="number" name="value" value="${item.value}" required>
-                        </div>
-                    ` : `
-                        <div class="form-group">
-                            <label>
-                                <input type="checkbox" name="state" ${item.state ? 'checked' : ''}>
-                                Включено
-                            </label>
-                        </div>
-                    `}
-                    <div class="modal-actions">
-                        <button type="submit" class="btn-primary">Сохранить</button>
-                        <button type="button" class="btn-secondary" id="cancelBtn">Отмена</button>
-                    </div>
-                </form>
-            </div>
-        `;
-
-        document.body.appendChild(modal);
-
-        modal.querySelector('#cancelBtn').addEventListener('click', () => modal.remove());
-        
-        modal.querySelector('#editForm').addEventListener('submit', async (e) => {
-            e.preventDefault();
-            const formData = new FormData(e.target);
-            
-            const updates = { name: formData.get('name') };
-            if (type === 'sensor') {
-                updates.value = parseFloat(formData.get('value'));
-            } else {
-                updates.state = formData.has('state');
-            }
-
-            await this.saveItem(type, id, updates);
-            modal.remove();
-        });
-    }
-
-    async saveItem(type, id, updates) {
-        try {
-            const endpoint = type === 'sensor' 
-                ? `/api/v1/sensors/${id}` 
-                : `/api/v1/devices/${id}`;
-            
-            const headers = {
-                ...authService.getAuthHeaders(),
-                'Content-Type': 'application/json'
-            };
-
-            await fetch(endpoint, {
-                method: 'PUT',
-                headers,
-                credentials: 'same-origin',
-                body: JSON.stringify(updates)
-            });
-
-            await this.loadData();
-        } catch (error) {
-            console.error('Failed to save:', error);
-        }
     }
 }

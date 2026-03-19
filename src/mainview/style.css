@@ -198,3 +198,89 @@
 .device-item.edit-mode {
     background: #fff3cd;
 }
+
+.widgets-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+    gap: 20px;
+}
+
+.widget-card {
+    background: var(--card-bg, #f5f5f5);
+    border-radius: 12px;
+    padding: 20px;
+    cursor: pointer;
+    transition: transform 0.2s, box-shadow 0.2s;
+}
+
+.widget-card:hover {
+    transform: translateY(-4px);
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+}
+
+.widget-title {
+    margin: 0 0 15px 0;
+    font-size: 1rem;
+    color: var(--text-primary, #333);
+}
+
+.widget-preview {
+    min-height: 60px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: var(--text-secondary, #666);
+}
+
+.widget-unavailable {
+    color: #999;
+    font-style: italic;
+}
+
+.widget-detail {
+    background: var(--card-bg, #f5f5f5);
+    border-radius: 12px;
+    padding: 30px;
+}
+
+.clock-display {
+    font-size: 4rem;
+    font-weight: 300;
+    text-align: center;
+    margin-bottom: 20px;
+    font-family: monospace;
+}
+
+.clock-info {
+    display: flex;
+    justify-content: center;
+    gap: 30px;
+    color: var(--text-secondary, #666);
+}
+
+.network-ips-list {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+}
+
+.ip-item {
+    display: flex;
+    justify-content: space-between;
+    padding: 12px 15px;
+    background: var(--bg-color, #fff);
+    border-radius: 6px;
+}
+
+.ip-label {
+    font-weight: 500;
+}
+
+.ip-value {
+    font-family: monospace;
+    color: var(--accent-color, #007bff);
+}
+
+.widget-detail button {
+    margin-top: 20px;
+}
